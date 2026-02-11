@@ -119,14 +119,18 @@ pub fn rdev_key_to_key(key: rdev::Key) -> Option<Key> {
     }
 }
 
-/// Convert an rdev modifier key to our Modifiers type
+/// Convert an rdev modifier key to our side-specific Modifiers type
 pub fn rdev_key_to_modifier(key: rdev::Key) -> Option<Modifiers> {
     use rdev::Key as RK;
     match key {
-        RK::ShiftLeft | RK::ShiftRight => Some(Modifiers::SHIFT),
-        RK::ControlLeft | RK::ControlRight => Some(Modifiers::CTRL),
-        RK::Alt | RK::AltGr => Some(Modifiers::OPT),
-        RK::MetaLeft | RK::MetaRight => Some(Modifiers::CMD),
+        RK::ShiftLeft => Some(Modifiers::SHIFT_LEFT),
+        RK::ShiftRight => Some(Modifiers::SHIFT_RIGHT),
+        RK::ControlLeft => Some(Modifiers::CTRL_LEFT),
+        RK::ControlRight => Some(Modifiers::CTRL_RIGHT),
+        RK::Alt => Some(Modifiers::OPT_LEFT),
+        RK::AltGr => Some(Modifiers::OPT_RIGHT),
+        RK::MetaLeft => Some(Modifiers::CMD_LEFT),
+        RK::MetaRight => Some(Modifiers::CMD_RIGHT),
         _ => None,
     }
 }
@@ -148,10 +152,14 @@ pub fn rdev_button_to_key(button: rdev::Button) -> Option<Key> {
 pub fn update_modifiers(current: Modifiers, key: rdev::Key, pressed: bool) -> Modifiers {
     use rdev::Key as RK;
     let modifier = match key {
-        RK::ShiftLeft | RK::ShiftRight => Modifiers::SHIFT,
-        RK::ControlLeft | RK::ControlRight => Modifiers::CTRL,
-        RK::Alt | RK::AltGr => Modifiers::OPT,
-        RK::MetaLeft | RK::MetaRight => Modifiers::CMD,
+        RK::ShiftLeft => Modifiers::SHIFT_LEFT,
+        RK::ShiftRight => Modifiers::SHIFT_RIGHT,
+        RK::ControlLeft => Modifiers::CTRL_LEFT,
+        RK::ControlRight => Modifiers::CTRL_RIGHT,
+        RK::Alt => Modifiers::OPT_LEFT,
+        RK::AltGr => Modifiers::OPT_RIGHT,
+        RK::MetaLeft => Modifiers::CMD_LEFT,
+        RK::MetaRight => Modifiers::CMD_RIGHT,
         _ => return current,
     };
 

@@ -31,8 +31,9 @@ impl ListenerState {
     pub fn should_block(&self, modifiers: Modifiers, key: Option<Key>) -> bool {
         if let Some(ref hotkeys) = self.blocking_hotkeys {
             if let Ok(set) = hotkeys.lock() {
-                let hotkey = Hotkey { modifiers, key };
-                return set.contains(&hotkey);
+                return set
+                    .iter()
+                    .any(|h| h.modifiers.matches(modifiers) && h.key == key);
             }
         }
         false

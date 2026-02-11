@@ -67,28 +67,105 @@ impl Hotkey {
     /// Uses platform-appropriate naming:
     /// - macOS: "command", "option", "ctrl", "shift"
     /// - Windows/Linux: "ctrl", "alt", "super", "shift"
+    ///
+    /// Side-specific modifiers use `_left`/`_right` suffixes.
     pub fn to_handy_string(&self) -> String {
         #[cfg(target_os = "macos")]
-        const MOD_NAMES: (&str, &str, &str, &str, &str) = ("ctrl", "option", "shift", "command", "fn");
+        fn mod_names(
+            mods: Modifiers,
+            left: Modifiers,
+            right: Modifiers,
+            compound: Modifiers,
+            name: &str,
+        ) -> Option<String> {
+            if mods.contains(compound) {
+                Some(name.to_string())
+            } else if mods.contains(left) {
+                Some(format!("{}_left", name))
+            } else if mods.contains(right) {
+                Some(format!("{}_right", name))
+            } else {
+                None
+            }
+        }
+
         #[cfg(not(target_os = "macos"))]
-        const MOD_NAMES: (&str, &str, &str, &str, &str) = ("ctrl", "alt", "shift", "super", "");
+        fn mod_names(
+            mods: Modifiers,
+            left: Modifiers,
+            right: Modifiers,
+            compound: Modifiers,
+            name: &str,
+        ) -> Option<String> {
+            if mods.contains(compound) {
+                Some(name.to_string())
+            } else if mods.contains(left) {
+                Some(format!("{}_left", name))
+            } else if mods.contains(right) {
+                Some(format!("{}_right", name))
+            } else {
+                None
+            }
+        }
 
         let mut parts = Vec::new();
 
-        if self.modifiers.contains(Modifiers::CTRL) {
-            parts.push(MOD_NAMES.0);
+        // Ctrl
+        if let Some(s) = mod_names(
+            self.modifiers,
+            Modifiers::CTRL_LEFT,
+            Modifiers::CTRL_RIGHT,
+            Modifiers::CTRL,
+            "ctrl",
+        ) {
+            parts.push(s);
         }
-        if self.modifiers.contains(Modifiers::OPT) {
-            parts.push(MOD_NAMES.1);
+
+        // Opt/Alt
+        #[cfg(target_os = "macos")]
+        let opt_name = "option";
+        #[cfg(not(target_os = "macos"))]
+        let opt_name = "alt";
+        if let Some(s) = mod_names(
+            self.modifiers,
+            Modifiers::OPT_LEFT,
+            Modifiers::OPT_RIGHT,
+            Modifiers::OPT,
+            opt_name,
+        ) {
+            parts.push(s);
         }
-        if self.modifiers.contains(Modifiers::SHIFT) {
-            parts.push(MOD_NAMES.2);
+
+        // Shift
+        if let Some(s) = mod_names(
+            self.modifiers,
+            Modifiers::SHIFT_LEFT,
+            Modifiers::SHIFT_RIGHT,
+            Modifiers::SHIFT,
+            "shift",
+        ) {
+            parts.push(s);
         }
-        if self.modifiers.contains(Modifiers::CMD) {
-            parts.push(MOD_NAMES.3);
+
+        // Cmd/Super
+        #[cfg(target_os = "macos")]
+        let cmd_name = "command";
+        #[cfg(not(target_os = "macos"))]
+        let cmd_name = "super";
+        if let Some(s) = mod_names(
+            self.modifiers,
+            Modifiers::CMD_LEFT,
+            Modifiers::CMD_RIGHT,
+            Modifiers::CMD,
+            cmd_name,
+        ) {
+            parts.push(s);
         }
-        if !MOD_NAMES.4.is_empty() && self.modifiers.contains(Modifiers::FN) {
-            parts.push(MOD_NAMES.4);
+
+        // Fn (macOS only)
+        #[cfg(target_os = "macos")]
+        if self.modifiers.contains(Modifiers::FN) {
+            parts.push("fn".to_string());
         }
 
         if let Some(key) = &self.key {
@@ -242,6 +319,20 @@ mod tests {
         let hotkey: Hotkey = "Cmd+Shift".parse().unwrap();
         assert_eq!(hotkey.modifiers, Modifiers::CMD | Modifiers::SHIFT);
         assert_eq!(hotkey.key, None);
+    }
+
+    #[test]
+    fn parse_side_specific_hotkey() {
+        let hotkey: Hotkey = "CtrlRight+Space".parse().unwrap();
+        assert_eq!(hotkey.modifiers, Modifiers::CTRL_RIGHT);
+        assert_eq!(hotkey.key, Some(Key::Space));
+
+        let hotkey: Hotkey = "CmdLeft+ShiftRight+K".parse().unwrap();
+        assert_eq!(
+            hotkey.modifiers,
+            Modifiers::CMD_LEFT | Modifiers::SHIFT_RIGHT
+        );
+        assert_eq!(hotkey.key, Some(Key::K));
     }
 
     #[test]
