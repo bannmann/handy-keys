@@ -224,13 +224,20 @@ pub fn vk_to_key(vk_code: u16, is_extended: bool) -> Option<Key> {
     }
 }
 
-/// Convert Windows virtual key code to Modifier
+/// Convert Windows virtual key code to side-specific Modifier
 pub fn vk_to_modifier(vk_code: u16) -> Option<Modifiers> {
     match vk_code {
-        vk::SHIFT | vk::LSHIFT | vk::RSHIFT => Some(Modifiers::SHIFT),
-        vk::CONTROL | vk::LCONTROL | vk::RCONTROL => Some(Modifiers::CTRL),
-        vk::MENU | vk::LMENU | vk::RMENU => Some(Modifiers::OPT),
-        vk::LWIN | vk::RWIN => Some(Modifiers::CMD),
+        vk::LSHIFT => Some(Modifiers::SHIFT_LEFT),
+        vk::RSHIFT => Some(Modifiers::SHIFT_RIGHT),
+        vk::SHIFT => Some(Modifiers::SHIFT_LEFT), // generic falls back to left
+        vk::LCONTROL => Some(Modifiers::CTRL_LEFT),
+        vk::RCONTROL => Some(Modifiers::CTRL_RIGHT),
+        vk::CONTROL => Some(Modifiers::CTRL_LEFT),
+        vk::LMENU => Some(Modifiers::OPT_LEFT),
+        vk::RMENU => Some(Modifiers::OPT_RIGHT),
+        vk::MENU => Some(Modifiers::OPT_LEFT),
+        vk::LWIN => Some(Modifiers::CMD_LEFT),
+        vk::RWIN => Some(Modifiers::CMD_RIGHT),
         _ => None,
     }
 }

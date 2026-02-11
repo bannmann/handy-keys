@@ -287,8 +287,9 @@ fn should_block_hotkey(
 ) -> bool {
     if let Some(ref hotkeys) = blocking_hotkeys {
         if let Ok(set) = hotkeys.lock() {
-            let hotkey = Hotkey { modifiers, key };
-            return set.contains(&hotkey);
+            return set
+                .iter()
+                .any(|h| h.modifiers.matches(modifiers) && h.key == key);
         }
     }
     false

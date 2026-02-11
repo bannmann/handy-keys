@@ -225,37 +225,32 @@ pub fn keycode_to_key(keycode: CGKeyCode) -> Option<Key> {
     }
 }
 
-/// Convert a modifier keycode to the corresponding Modifier flag
+/// Convert a modifier keycode to the corresponding side-specific Modifier flag
 pub fn keycode_to_modifier(keycode: CGKeyCode) -> Option<Modifiers> {
     match keycode {
-        keycodes::COMMAND | keycodes::RIGHT_COMMAND => Some(Modifiers::CMD),
-        keycodes::SHIFT | keycodes::RIGHT_SHIFT => Some(Modifiers::SHIFT),
-        keycodes::CONTROL | keycodes::RIGHT_CONTROL => Some(Modifiers::CTRL),
-        keycodes::OPTION | keycodes::RIGHT_OPTION => Some(Modifiers::OPT),
+        keycodes::COMMAND => Some(Modifiers::CMD_LEFT),
+        keycodes::RIGHT_COMMAND => Some(Modifiers::CMD_RIGHT),
+        keycodes::SHIFT => Some(Modifiers::SHIFT_LEFT),
+        keycodes::RIGHT_SHIFT => Some(Modifiers::SHIFT_RIGHT),
+        keycodes::CONTROL => Some(Modifiers::CTRL_LEFT),
+        keycodes::RIGHT_CONTROL => Some(Modifiers::CTRL_RIGHT),
+        keycodes::OPTION => Some(Modifiers::OPT_LEFT),
+        keycodes::RIGHT_OPTION => Some(Modifiers::OPT_RIGHT),
         keycodes::FUNCTION => Some(Modifiers::FN),
         _ => None,
     }
 }
 
-/// Convert CGEventFlags to our Modifiers bitflags
-pub fn flags_to_modifiers(flags: CGEventFlags) -> Modifiers {
-    let mut mods = Modifiers::empty();
+/// Check whether CGEventFlags indicate the FN key is held.
+///
+/// Used alongside keycode-tracked modifier state for side-specific modifiers,
+/// since CGEventFlags are side-agnostic for Cmd/Shift/Ctrl/Opt but FN only
+/// appears in flags.
+pub fn flags_have_fn(flags: CGEventFlags) -> bool {
+    flags.contains(CGEventFlags::MaskSecondaryFn)
+}
 
-    if flags.contains(CGEventFlags::MaskCommand) {
-        mods |= Modifiers::CMD;
-    }
-    if flags.contains(CGEventFlags::MaskShift) {
-        mods |= Modifiers::SHIFT;
-    }
-    if flags.contains(CGEventFlags::MaskControl) {
-        mods |= Modifiers::CTRL;
-    }
-    if flags.contains(CGEventFlags::MaskAlternate) {
-        mods |= Modifiers::OPT;
-    }
-    if flags.contains(CGEventFlags::MaskSecondaryFn) {
-        mods |= Modifiers::FN;
-    }
-
-    mods
+/// Check whether CGEventFlags indicate the alpha-shift (Caps Lock) state.
+pub fn flags_have_alpha_shift(flags: CGEventFlags) -> bool {
+    flags.contains(CGEventFlags::MaskAlphaShift)
 }

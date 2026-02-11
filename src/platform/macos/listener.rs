@@ -9,15 +9,15 @@ use std::thread::{self, JoinHandle};
 
 use objc2_core_foundation::{CFMachPort, CFRetained, CFRunLoop, CFRunLoopSource};
 use objc2_core_graphics::{
-    CGEvent, CGEventField, CGEventFlags, CGEventMask, CGEventTapCallBack, CGEventTapLocation,
+    CGEvent, CGEventField, CGEventMask, CGEventTapCallBack, CGEventTapLocation,
     CGEventTapOptions, CGEventTapPlacement, CGEventTapProxy, CGEventType,
 };
 
 use crate::error::{Error, Result};
 use crate::platform::state::{BlockingHotkeys, ListenerState};
-use crate::types::{Key, KeyEvent};
+use crate::types::{Key, KeyEvent, Modifiers};
 
-use super::keycode::{flags_to_modifiers, keycode_to_key, keycode_to_modifier};
+use super::keycode::{flags_have_alpha_shift, flags_have_fn, keycode_to_key, keycode_to_modifier};
 use super::permissions::check_accessibility;
 
 /// Internal listener state returned to KeyboardListener
@@ -85,11 +85,17 @@ unsafe extern "C-unwind" fn event_tap_callback(
 
     let cg_event = event.as_ref();
     let flags = CGEvent::flags(Some(cg_event));
-    let modifiers = flags_to_modifiers(flags);
 
     let mut should_block = false;
 
     if let Ok(mut state) = state.lock() {
+        // Build side-specific modifiers from internally tracked state + FN from flags
+        let modifiers = if flags_have_fn(flags) {
+            state.current_modifiers | Modifiers::FN
+        } else {
+            state.current_modifiers & !Modifiers::FN
+        };
+
         match event_type {
             CGEventType::KeyDown => {
                 let keycode =
@@ -102,7 +108,7 @@ unsafe extern "C-unwind" fn event_tap_callback(
                 // These have MaskSecondaryFn set but use special keycodes (like 0xA0)
                 // that we don't recognize. Without this check, they'd be reported as
                 // "Fn pressed" with no key.
-                if key.is_none() && flags.contains(CGEventFlags::MaskSecondaryFn) {
+                if key.is_none() && flags_have_fn(flags) {
                     return event.as_ptr();
                 }
 
@@ -124,7 +130,7 @@ unsafe extern "C-unwind" fn event_tap_callback(
                 let key = keycode_to_key(keycode);
 
                 // Skip special function key events (same as KeyDown)
-                if key.is_none() && flags.contains(CGEventFlags::MaskSecondaryFn) {
+                if key.is_none() && flags_have_fn(flags) {
                     return event.as_ptr();
                 }
 
@@ -149,15 +155,10 @@ unsafe extern "C-unwind" fn event_tap_callback(
                 // as FlagsChanged but isn't a traditional modifier
                 let lock_key = keycode_to_key(keycode);
 
-                let prev_mods = state.current_modifiers;
-                state.current_modifiers = modifiers;
-
                 // Handle lock keys specially - they come through FlagsChanged
                 // but don't change our tracked modifier state
                 if let Some(key) = lock_key {
-                    // For lock keys, we need to track press/release via the alpha lock flag
-                    // or just emit both down and up on each press
-                    let is_key_down = flags.contains(CGEventFlags::MaskAlphaShift);
+                    let is_key_down = flags_have_alpha_shift(flags);
 
                     should_block = state.should_block(modifiers, Some(key));
 
@@ -167,24 +168,57 @@ unsafe extern "C-unwind" fn event_tap_callback(
                         is_key_down,
                         changed_modifier: None,
                     });
-                } else if modifiers != prev_mods {
-                    // Regular modifier key - only emit if modifiers actually changed
-                    // Determine press vs release by checking which bits changed
-                    let gained = modifiers.bits() & !prev_mods.bits();
-                    // A key is down if we gained any modifier bits
-                    let is_key_down = gained != 0;
+                } else if let Some(modifier_bit) = changed_modifier {
+                    // Regular modifier key — use keycode to toggle the specific bit
+                    let was_set = state.current_modifiers.contains(modifier_bit);
+                    let is_key_down = !was_set;
+
+                    if is_key_down {
+                        state.current_modifiers |= modifier_bit;
+                    } else {
+                        state.current_modifiers &= !modifier_bit;
+                    }
+
+                    // Re-derive modifiers after update (include FN from flags)
+                    let new_modifiers = if flags_have_fn(flags) {
+                        state.current_modifiers | Modifiers::FN
+                    } else {
+                        state.current_modifiers & !Modifiers::FN
+                    };
 
                     // Check if this modifier-only combo should be blocked
                     if is_key_down {
-                        should_block = state.should_block(modifiers, None);
+                        should_block = state.should_block(new_modifiers, None);
                     }
 
                     let _ = state.event_sender.send(KeyEvent {
-                        modifiers,
+                        modifiers: new_modifiers,
                         key: None,
                         is_key_down,
-                        changed_modifier,
+                        changed_modifier: changed_modifier,
                     });
+                } else if keycode == 0x3F {
+                    // FN key itself — tracked via flags, not keycode state
+                    let had_fn = modifiers.contains(Modifiers::FN);
+                    let has_fn = flags_have_fn(flags);
+                    if had_fn != has_fn {
+                        let new_modifiers = if has_fn {
+                            state.current_modifiers | Modifiers::FN
+                        } else {
+                            state.current_modifiers & !Modifiers::FN
+                        };
+
+                        if has_fn {
+                            should_block = state.should_block(new_modifiers, None);
+                        }
+
+                        let _ = state.event_sender.send(KeyEvent {
+                            modifiers: new_modifiers,
+                            key: None,
+                            is_key_down: has_fn,
+                            changed_modifier: Some(Modifiers::FN),
+                        });
+                    }
                 }
             }
             // Mouse button events
