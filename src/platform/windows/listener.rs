@@ -8,7 +8,7 @@ use std::thread::{self, JoinHandle};
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, PeekMessageW, SetWindowsHookExW, TranslateMessage,
-    UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, MSLLHOOKSTRUCT, MSG, PM_REMOVE,
+    UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, MSG, MSLLHOOKSTRUCT, PM_REMOVE,
     WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
     WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
@@ -60,7 +60,8 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<Windows
         });
 
         // Install the low-level keyboard hook
-        let kb_hook = unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_proc), None, 0) };
+        let kb_hook =
+            unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_hook_proc), None, 0) };
 
         let kb_hook = match kb_hook {
             Ok(h) => h,
@@ -78,7 +79,9 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<Windows
             Err(e) => {
                 eprintln!("Failed to install mouse hook: {:?}", e);
                 // Clean up keyboard hook before returning
-                unsafe { let _ = UnhookWindowsHookEx(kb_hook); }
+                unsafe {
+                    let _ = UnhookWindowsHookEx(kb_hook);
+                }
                 return;
             }
         };
@@ -131,11 +134,7 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<Windows
 ///
 /// This function is called by Windows for every keyboard event system-wide.
 /// It must return quickly to avoid input lag.
-unsafe extern "system" fn keyboard_hook_proc(
-    code: i32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
+unsafe extern "system" fn keyboard_hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     // If code < 0, we must pass to next hook without processing
     if code < 0 {
         return CallNextHookEx(None, code, wparam, lparam);
@@ -168,11 +167,8 @@ unsafe extern "system" fn keyboard_hook_proc(
                 // Only emit event if modifiers actually changed
                 if ctx.current_modifiers != prev_modifiers {
                     // Check if modifier-only combo should be blocked
-                    should_block = should_block_hotkey(
-                        &ctx.blocking_hotkeys,
-                        ctx.current_modifiers,
-                        None,
-                    );
+                    should_block =
+                        should_block_hotkey(&ctx.blocking_hotkeys, ctx.current_modifiers, None);
 
                     let _ = ctx.event_sender.send(KeyEvent {
                         modifiers: ctx.current_modifiers,
@@ -183,11 +179,8 @@ unsafe extern "system" fn keyboard_hook_proc(
                 }
             } else if let Some(key) = vk_to_key(vk_code, is_extended) {
                 // Regular key event
-                should_block = should_block_hotkey(
-                    &ctx.blocking_hotkeys,
-                    ctx.current_modifiers,
-                    Some(key),
-                );
+                should_block =
+                    should_block_hotkey(&ctx.blocking_hotkeys, ctx.current_modifiers, Some(key));
 
                 let _ = ctx.event_sender.send(KeyEvent {
                     modifiers: ctx.current_modifiers,
@@ -211,11 +204,7 @@ unsafe extern "system" fn keyboard_hook_proc(
 /// Low-level mouse hook callback
 ///
 /// This function is called by Windows for every mouse event system-wide.
-unsafe extern "system" fn mouse_hook_proc(
-    code: i32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
+unsafe extern "system" fn mouse_hook_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     // If code < 0, we must pass to next hook without processing
     if code < 0 {
         return CallNextHookEx(None, code, wparam, lparam);
