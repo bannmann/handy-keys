@@ -109,10 +109,12 @@ impl KeyboardListener {
     ///
     /// Blocks until a key event is received, the timeout expires, or the listener stops.
     pub fn recv_timeout(&self, timeout: Duration) -> Result<KeyEvent> {
-        self.event_receiver.recv_timeout(timeout).map_err(|e| match e {
-            std::sync::mpsc::RecvTimeoutError::Timeout => Error::Timeout,
-            std::sync::mpsc::RecvTimeoutError::Disconnected => Error::EventLoopNotRunning,
-        })
+        self.event_receiver
+            .recv_timeout(timeout)
+            .map_err(|e| match e {
+                std::sync::mpsc::RecvTimeoutError::Timeout => Error::Timeout,
+                std::sync::mpsc::RecvTimeoutError::Disconnected => Error::EventLoopNotRunning,
+            })
     }
 
     /// Non-blocking receive for key events
