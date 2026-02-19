@@ -9,8 +9,9 @@ use std::thread::{self, JoinHandle};
 
 use objc2_core_foundation::{CFMachPort, CFRetained, CFRunLoop, CFRunLoopSource};
 use objc2_core_graphics::{
-    CGEvent, CGEventField, CGEventMask, CGEventTapCallBack, CGEventTapLocation,
-    CGEventTapOptions, CGEventTapPlacement, CGEventTapProxy, CGEventType,
+    CGEvent, CGEventField, CGEventFlags, CGEventMask, CGEventSource, CGEventSourceStateID,
+    CGEventTapCallBack, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement,
+    CGEventTapProxy, CGEventType,
 };
 
 use crate::error::{Error, Result};
@@ -71,6 +72,43 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<MacOSLi
     })
 }
 
+/// Reconcile internally tracked modifiers against the actual CGEventFlags from the OS.
+///
+/// This corrects drift caused by missed events (e.g., tap disabled by timeout, system
+/// interruptions like Mission Control or screen lock). Should only be called for
+/// non-FlagsChanged events, where flags reflect the current state with no change pending.
+fn reconcile_modifiers(current: &mut Modifiers, flags: CGEventFlags) {
+    // If OS says a modifier group is NOT held, clear our tracked bits.
+    // This fixes "stuck modifier" from missed release events.
+    if !flags.contains(CGEventFlags::MaskControl) {
+        current.remove(Modifiers::CTRL_LEFT | Modifiers::CTRL_RIGHT);
+    }
+    if !flags.contains(CGEventFlags::MaskShift) {
+        current.remove(Modifiers::SHIFT_LEFT | Modifiers::SHIFT_RIGHT);
+    }
+    if !flags.contains(CGEventFlags::MaskCommand) {
+        current.remove(Modifiers::CMD_LEFT | Modifiers::CMD_RIGHT);
+    }
+    if !flags.contains(CGEventFlags::MaskAlternate) {
+        current.remove(Modifiers::OPT_LEFT | Modifiers::OPT_RIGHT);
+    }
+
+    // If OS says a modifier group IS held but we have no bits for it,
+    // we missed a press event. Default to left side as fallback.
+    if flags.contains(CGEventFlags::MaskControl) && !current.intersects(Modifiers::CTRL) {
+        current.insert(Modifiers::CTRL_LEFT);
+    }
+    if flags.contains(CGEventFlags::MaskShift) && !current.intersects(Modifiers::SHIFT) {
+        current.insert(Modifiers::SHIFT_LEFT);
+    }
+    if flags.contains(CGEventFlags::MaskCommand) && !current.intersects(Modifiers::CMD) {
+        current.insert(Modifiers::CMD_LEFT);
+    }
+    if flags.contains(CGEventFlags::MaskAlternate) && !current.intersects(Modifiers::OPT) {
+        current.insert(Modifiers::OPT_LEFT);
+    }
+}
+
 /// The callback function for the event tap
 ///
 /// Returns NULL to block the event, or the event pointer to pass it through.
@@ -89,6 +127,13 @@ unsafe extern "C-unwind" fn event_tap_callback(
     let mut should_block = false;
 
     if let Ok(mut state) = state.lock() {
+        // Reconcile tracked modifiers against OS flags for non-FlagsChanged events.
+        // On FlagsChanged, flags reflect the state *after* the current change, so
+        // reconciling would fight with the toggle logic.
+        if event_type != CGEventType::FlagsChanged {
+            reconcile_modifiers(&mut state.current_modifiers, flags);
+        }
+
         // Build side-specific modifiers from internally tracked state + FN from flags
         let modifiers = if flags_have_fn(flags) {
             state.current_modifiers | Modifiers::FN
@@ -296,6 +341,15 @@ unsafe extern "C-unwind" fn event_tap_callback(
                     });
                 }
             }
+            CGEventType::TapDisabledByTimeout | CGEventType::TapDisabledByUserInput => {
+                // macOS disabled the tap (callback latency or user input).
+                // The run loop thread will re-enable it; reconcile modifiers
+                // now since we may have missed events while disabled.
+                reconcile_modifiers(
+                    &mut state.current_modifiers,
+                    CGEventSource::flags_state(CGEventSourceStateID::CombinedSessionState),
+                );
+            }
             _ => {}
         }
     }
@@ -406,6 +460,11 @@ fn run_event_tap(
             0.1, // 100ms timeout
             true,
         );
+
+        // Re-enable tap if macOS disabled it due to callback latency
+        if !CGEvent::tap_is_enabled(&tap) {
+            CGEvent::tap_enable(&tap, true);
+        }
     }
 
     // Cleanup

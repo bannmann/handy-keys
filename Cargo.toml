@@ -30,7 +30,7 @@ thiserror = "2"
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-core-foundation = "0.3"
-objc2-core-graphics = { version = "0.3", features = ["CGEvent", "CGEventTypes", "CGRemoteOperation"] }
+objc2-core-graphics = { version = "0.3", features = ["CGEvent", "CGEventTypes", "CGEventSource", "CGRemoteOperation"] }
 objc2-app-kit = { version = "0.3", features = ["NSEvent", "NSApplication"] }
 objc2-foundation = "0.3"
 block2 = "0.6"
