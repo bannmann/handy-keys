@@ -59,8 +59,7 @@ impl ManagerState {
                 .filter(|(&id, hotkey)| {
                     self.pressed_hotkeys.contains(&id)
                         && (hotkey.key == event.key
-                            || (event.key.is_none()
-                                && !hotkey.modifiers.matches(event.modifiers)))
+                            || (event.key.is_none() && !hotkey.modifiers.matches(event.modifiers)))
                 })
                 .map(|(&id, _)| id)
                 .collect();
@@ -91,17 +90,43 @@ pub struct HotkeyManager {
     _thread_handle: Option<JoinHandle<()>>,
     running: Arc<std::sync::atomic::AtomicBool>,
     /// Shared set of hotkeys to block
-    blocking_hotkeys: BlockingHotkeys,
+    blocking_hotkeys: Option<BlockingHotkeys>,
 }
 
 impl HotkeyManager {
-    /// Create a new HotkeyManager
+    /// Create a new HotkeyManager (non-blocking mode)
+    ///
+    /// On macOS, this will check for accessibility permissions and fail if not granted.
+    pub fn new() -> Result<Self> {
+        let listener = KeyboardListener::new()?;
+
+        let (tx, rx) = mpsc::channel();
+        let state = Arc::new(Mutex::new(ManagerState::new()));
+        let running = Arc::new(std::sync::atomic::AtomicBool::new(true));
+
+        let thread_state = Arc::clone(&state);
+        let thread_running = Arc::clone(&running);
+
+        let handle = thread::spawn(move || {
+            Self::event_loop(listener, thread_state, tx, thread_running);
+        });
+
+        Ok(Self {
+            state,
+            event_receiver: rx,
+            _thread_handle: Some(handle),
+            running,
+            blocking_hotkeys: None,
+        })
+    }
+
+    /// Create a new HotkeyManager with blocking support
     ///
     /// On macOS, this will check for accessibility permissions and fail if not granted.
     /// Registered hotkeys will be blocked from reaching other applications.
     ///
     /// Note: On Linux/Wayland, blocking may not work due to compositor restrictions.
-    pub fn new() -> Result<Self> {
+    pub fn new_with_blocking() -> Result<Self> {
         let blocking_hotkeys: BlockingHotkeys = Arc::new(Mutex::new(HashSet::new()));
         let listener = KeyboardListener::new_with_blocking(blocking_hotkeys.clone())?;
 
@@ -121,7 +146,7 @@ impl HotkeyManager {
             event_receiver: rx,
             _thread_handle: Some(handle),
             running,
-            blocking_hotkeys,
+            blocking_hotkeys: Some(blocking_hotkeys),
         })
     }
 
@@ -180,8 +205,10 @@ impl HotkeyManager {
         state.hotkeys.insert(id, hotkey);
 
         // Add to blocking set
-        if let Ok(mut blocking) = self.blocking_hotkeys.lock() {
-            blocking.insert(hotkey);
+        if let Some(blocking_hotkeys) = &self.blocking_hotkeys {
+            if let Ok(mut blocking) = blocking_hotkeys.lock() {
+                blocking.insert(hotkey);
+            }
         }
 
         Ok(id)
@@ -199,9 +226,11 @@ impl HotkeyManager {
         }
 
         // Remove from blocking set
-        if let Some(hotkey) = hotkey {
-            if let Ok(mut blocking) = self.blocking_hotkeys.lock() {
-                blocking.remove(&hotkey);
+        if let Some(blocking_hotkeys) = &self.blocking_hotkeys {
+            if let Some(hotkey) = hotkey {
+                if let Ok(mut blocking) = blocking_hotkeys.lock() {
+                    blocking.remove(&hotkey);
+                }
             }
         }
 
@@ -272,7 +301,11 @@ mod tests {
         }
     }
 
-    fn make_modifier_event(modifiers: Modifiers, is_key_down: bool, changed: Modifiers) -> KeyEvent {
+    fn make_modifier_event(
+        modifiers: Modifiers,
+        is_key_down: bool,
+        changed: Modifiers,
+    ) -> KeyEvent {
         KeyEvent {
             modifiers,
             key: None,

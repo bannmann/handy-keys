@@ -37,7 +37,11 @@ bitflags! {
 /// Helper: all modifier groups as (left, right, compound) triples.
 const GROUPS: [(Modifiers, Modifiers, Modifiers); 4] = [
     (Modifiers::CMD_LEFT, Modifiers::CMD_RIGHT, Modifiers::CMD),
-    (Modifiers::SHIFT_LEFT, Modifiers::SHIFT_RIGHT, Modifiers::SHIFT),
+    (
+        Modifiers::SHIFT_LEFT,
+        Modifiers::SHIFT_RIGHT,
+        Modifiers::SHIFT,
+    ),
     (Modifiers::CTRL_LEFT, Modifiers::CTRL_RIGHT, Modifiers::CTRL),
     (Modifiers::OPT_LEFT, Modifiers::OPT_RIGHT, Modifiers::OPT),
 ];
@@ -250,18 +254,12 @@ mod tests {
             Modifiers::CTRL_RIGHT
         );
 
-        assert_eq!(
-            "OptLeft".parse::<Modifiers>().unwrap(),
-            Modifiers::OPT_LEFT
-        );
+        assert_eq!("OptLeft".parse::<Modifiers>().unwrap(), Modifiers::OPT_LEFT);
         assert_eq!(
             "AltRight".parse::<Modifiers>().unwrap(),
             Modifiers::OPT_RIGHT
         );
-        assert_eq!(
-            "AltGr".parse::<Modifiers>().unwrap(),
-            Modifiers::OPT_RIGHT
-        );
+        assert_eq!("AltGr".parse::<Modifiers>().unwrap(), Modifiers::OPT_RIGHT);
     }
 
     #[test]

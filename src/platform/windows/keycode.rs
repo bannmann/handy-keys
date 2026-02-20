@@ -22,7 +22,7 @@ mod vk {
 
     // Navigation keys
     pub const PRIOR: u16 = 0x21; // Page Up
-    pub const NEXT: u16 = 0x22;  // Page Down
+    pub const NEXT: u16 = 0x22; // Page Down
     pub const END: u16 = 0x23;
     pub const HOME: u16 = 0x24;
     pub const LEFT: u16 = 0x25;
@@ -86,17 +86,17 @@ mod vk {
     pub const RMENU: u16 = 0xA5; // Right Alt
 
     // OEM keys (punctuation - US keyboard layout)
-    pub const OEM_1: u16 = 0xBA;      // ;:
-    pub const OEM_PLUS: u16 = 0xBB;   // =+
-    pub const OEM_COMMA: u16 = 0xBC;  // ,<
-    pub const OEM_MINUS: u16 = 0xBD;  // -_
+    pub const OEM_1: u16 = 0xBA; // ;:
+    pub const OEM_PLUS: u16 = 0xBB; // =+
+    pub const OEM_COMMA: u16 = 0xBC; // ,<
+    pub const OEM_MINUS: u16 = 0xBD; // -_
     pub const OEM_PERIOD: u16 = 0xBE; // .>
-    pub const OEM_2: u16 = 0xBF;      // /?
-    pub const OEM_3: u16 = 0xC0;      // `~
-    pub const OEM_4: u16 = 0xDB;      // [{
-    pub const OEM_5: u16 = 0xDC;      // \|
-    pub const OEM_6: u16 = 0xDD;      // ]}
-    pub const OEM_7: u16 = 0xDE;      // '"
+    pub const OEM_2: u16 = 0xBF; // /?
+    pub const OEM_3: u16 = 0xC0; // `~
+    pub const OEM_4: u16 = 0xDB; // [{
+    pub const OEM_5: u16 = 0xDC; // \|
+    pub const OEM_6: u16 = 0xDD; // ]}
+    pub const OEM_7: u16 = 0xDE; // '"
 }
 
 /// Convert Windows virtual key code to Key
@@ -188,7 +188,7 @@ pub fn vk_to_key(vk_code: u16, is_extended: bool) -> Option<Key> {
         vk::F20 => Some(Key::F20),
 
         // Special keys
-        vk::BACK => Some(Key::Delete),         // Backspace
+        vk::BACK => Some(Key::Delete), // Backspace
         vk::DELETE => Some(Key::ForwardDelete),
         vk::TAB => Some(Key::Tab),
         vk::ESCAPE => Some(Key::Escape),

@@ -143,9 +143,10 @@ unsafe extern "C-unwind" fn event_tap_callback(
 
         match event_type {
             CGEventType::KeyDown => {
-                let keycode =
-                    CGEvent::integer_value_field(Some(cg_event), CGEventField::KeyboardEventKeycode)
-                        as u16;
+                let keycode = CGEvent::integer_value_field(
+                    Some(cg_event),
+                    CGEventField::KeyboardEventKeycode,
+                ) as u16;
 
                 let key = keycode_to_key(keycode);
 
@@ -168,9 +169,10 @@ unsafe extern "C-unwind" fn event_tap_callback(
                 });
             }
             CGEventType::KeyUp => {
-                let keycode =
-                    CGEvent::integer_value_field(Some(cg_event), CGEventField::KeyboardEventKeycode)
-                        as u16;
+                let keycode = CGEvent::integer_value_field(
+                    Some(cg_event),
+                    CGEventField::KeyboardEventKeycode,
+                ) as u16;
 
                 let key = keycode_to_key(keycode);
 
@@ -190,9 +192,10 @@ unsafe extern "C-unwind" fn event_tap_callback(
                 });
             }
             CGEventType::FlagsChanged => {
-                let keycode =
-                    CGEvent::integer_value_field(Some(cg_event), CGEventField::KeyboardEventKeycode)
-                        as u16;
+                let keycode = CGEvent::integer_value_field(
+                    Some(cg_event),
+                    CGEventField::KeyboardEventKeycode,
+                ) as u16;
 
                 let changed_modifier = keycode_to_modifier(keycode);
 
@@ -306,8 +309,10 @@ unsafe extern "C-unwind" fn event_tap_callback(
             | CGEventType::RightMouseDown
             | CGEventType::RightMouseUp => {}
             CGEventType::OtherMouseDown => {
-                let button_number =
-                    CGEvent::integer_value_field(Some(cg_event), CGEventField::MouseEventButtonNumber);
+                let button_number = CGEvent::integer_value_field(
+                    Some(cg_event),
+                    CGEventField::MouseEventButtonNumber,
+                );
                 let key = match button_number {
                     2 => Some(Key::MouseMiddle),
                     3 => Some(Key::MouseX1),
@@ -324,8 +329,10 @@ unsafe extern "C-unwind" fn event_tap_callback(
                 }
             }
             CGEventType::OtherMouseUp => {
-                let button_number =
-                    CGEvent::integer_value_field(Some(cg_event), CGEventField::MouseEventButtonNumber);
+                let button_number = CGEvent::integer_value_field(
+                    Some(cg_event),
+                    CGEventField::MouseEventButtonNumber,
+                );
                 let key = match button_number {
                     2 => Some(Key::MouseMiddle),
                     3 => Some(Key::MouseX1),

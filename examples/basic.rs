@@ -72,7 +72,10 @@ fn main() -> Result<()> {
     // Side-specific hotkey: only right Cmd+L triggers this
     let hotkey6: Hotkey = "CmdRight+L".parse()?;
     let id6 = manager.register(hotkey6)?;
-    log(&format!("Registered (side-specific): {} (id: {:?})", hotkey6, id6));
+    log(&format!(
+        "Registered (side-specific): {} (id: {:?})",
+        hotkey6, id6
+    ));
 
     log("Listening for hotkeys... Press Ctrl+C to exit.");
 
