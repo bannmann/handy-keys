@@ -17,6 +17,7 @@ mod keycodes {
     pub const X: u16 = 0x07;
     pub const C: u16 = 0x08;
     pub const V: u16 = 0x09;
+    pub const SECTION: u16 = 0x0A;
     pub const B: u16 = 0x0B;
     pub const Q: u16 = 0x0C;
     pub const W: u16 = 0x0D;
@@ -202,6 +203,7 @@ pub fn keycode_to_key(keycode: CGKeyCode) -> Option<Key> {
         keycodes::PERIOD => Some(Key::Period),
         keycodes::SLASH => Some(Key::Slash),
         keycodes::GRAVE => Some(Key::Grave),
+        keycodes::SECTION => Some(Key::Section),
         keycodes::KEYPAD_0 => Some(Key::Keypad0),
         keycodes::KEYPAD_1 => Some(Key::Keypad1),
         keycodes::KEYPAD_2 => Some(Key::Keypad2),

@@ -102,6 +102,7 @@ pub enum Key {
     Period,
     Slash,
     Grave,
+    Section,
 
     // Keypad
     Keypad0,
@@ -222,6 +223,7 @@ impl fmt::Display for Key {
             Key::Period => write!(f, "."),
             Key::Slash => write!(f, "/"),
             Key::Grave => write!(f, "`"),
+            Key::Section => write!(f, "§"),
             Key::Keypad0 => write!(f, "Keypad0"),
             Key::Keypad1 => write!(f, "Keypad1"),
             Key::Keypad2 => write!(f, "Keypad2"),
@@ -351,6 +353,7 @@ impl FromStr for Key {
             "." | "period" => Ok(Key::Period),
             "/" | "slash" => Ok(Key::Slash),
             "`" | "grave" | "backtick" => Ok(Key::Grave),
+            "§" | "section" => Ok(Key::Section),
 
             // Keypad
             "keypad0" => Ok(Key::Keypad0),
