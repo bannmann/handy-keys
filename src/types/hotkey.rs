@@ -209,6 +209,7 @@ impl FromStr for Hotkey {
     ///
     /// let hotkey: Hotkey = "Cmd+Shift+K".parse().unwrap();
     /// let hotkey: Hotkey = "Ctrl+Alt+Delete".parse().unwrap();
+    /// let hotkey: Hotkey = "KeypadPlus".parse().unwrap();
     /// let hotkey: Hotkey = "F1".parse().unwrap();  // Key only
     /// let hotkey: Hotkey = "Cmd+Shift".parse().unwrap();  // Modifiers only
     /// ```

@@ -234,7 +234,7 @@ impl fmt::Display for Key {
             Key::Keypad9 => write!(f, "Keypad9"),
             Key::KeypadDecimal => write!(f, "Keypad."),
             Key::KeypadMultiply => write!(f, "Keypad*"),
-            Key::KeypadPlus => write!(f, "Keypad+"),
+            Key::KeypadPlus => write!(f, "KeypadPlus"),
             Key::KeypadClear => write!(f, "KeypadClear"),
             Key::KeypadDivide => write!(f, "Keypad/"),
             Key::KeypadEnter => write!(f, "KeypadEnter"),
