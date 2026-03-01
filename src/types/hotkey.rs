@@ -209,6 +209,7 @@ impl FromStr for Hotkey {
     ///
     /// let hotkey: Hotkey = "Cmd+Shift+K".parse().unwrap();
     /// let hotkey: Hotkey = "Ctrl+Alt+Delete".parse().unwrap();
+    /// let hotkey: Hotkey = "KeypadPlus".parse().unwrap();
     /// let hotkey: Hotkey = "F1".parse().unwrap();  // Key only
     /// let hotkey: Hotkey = "Cmd+Shift".parse().unwrap();  // Modifiers only
     /// ```
@@ -362,6 +363,38 @@ mod tests {
         assert!(displayed.contains("Cmd"));
         assert!(displayed.contains("Shift"));
         assert!(displayed.contains("K"));
+    }
+
+    #[test]
+    fn hotkey_display_roundtrip_keypad() {
+        // Ensure all keypad keys roundtrip through Hotkey Display → FromStr
+        let keypad_keys = [
+            Key::KeypadPlus,
+            Key::KeypadMinus,
+            Key::KeypadMultiply,
+            Key::KeypadDivide,
+            Key::KeypadDecimal,
+            Key::KeypadEquals,
+            Key::KeypadEnter,
+            Key::KeypadClear,
+        ];
+        for key in keypad_keys {
+            // Key-only hotkey
+            let hotkey = Hotkey::new(Modifiers::empty(), key).unwrap();
+            let displayed = format!("{}", hotkey);
+            let parsed: Hotkey = displayed.parse().unwrap_or_else(|e| {
+                panic!("Failed to parse '{}' (from {:?}): {}", displayed, key, e)
+            });
+            assert_eq!(parsed, hotkey, "Key-only roundtrip failed for {:?}", key);
+
+            // With modifier
+            let hotkey = Hotkey::new(Modifiers::CMD, key).unwrap();
+            let displayed = format!("{}", hotkey);
+            let parsed: Hotkey = displayed.parse().unwrap_or_else(|e| {
+                panic!("Failed to parse '{}' (from Cmd+{:?}): {}", displayed, key, e)
+            });
+            assert_eq!(parsed, hotkey, "Cmd+{:?} roundtrip failed", key);
+        }
     }
 
     #[test]
