@@ -7,11 +7,11 @@ use std::thread::{self, JoinHandle};
 
 use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, PeekMessageW, SetWindowsHookExW, TranslateMessage,
-    UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, MSG, MSLLHOOKSTRUCT, PM_REMOVE,
-    WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
+    CallNextHookEx, DispatchMessageW, MsgWaitForMultipleObjects, PeekMessageW, SetWindowsHookExW,
+    TranslateMessage, UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LLKHF_EXTENDED, MSG, MSLLHOOKSTRUCT,
+    PM_REMOVE, QS_ALLINPUT, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN,
+    WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_QUIT, WM_RBUTTONDOWN, WM_RBUTTONUP,
+    WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
 };
 
 use crate::error::Result;
@@ -19,6 +19,8 @@ use crate::platform::state::BlockingHotkeys;
 use crate::types::{Hotkey, Key, KeyEvent, Modifiers};
 
 use super::keycode::{vk_to_key, vk_to_modifier};
+
+const HOOK_LOOP_TIMEOUT_MS: u32 = 10;
 
 /// Thread-local state for the keyboard hook callback.
 ///
@@ -32,6 +34,27 @@ struct HookContext {
 
 thread_local! {
     static HOOK_CONTEXT: std::cell::RefCell<Option<HookContext>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Drain all pending thread messages and return `true` if WM_QUIT was received.
+fn drain_thread_messages(msg: &mut MSG) -> bool {
+    unsafe {
+        while PeekMessageW(msg, None, 0, 0, PM_REMOVE).as_bool() {
+            if msg.message == WM_QUIT {
+                return true;
+            }
+            let _ = TranslateMessage(msg);
+            DispatchMessageW(msg);
+        }
+    }
+    false
+}
+
+/// Wait for new input/messages or until timeout expires.
+fn wait_for_message_or_timeout(timeout_ms: u32) {
+    unsafe {
+        let _ = MsgWaitForMultipleObjects(None, false, timeout_ms, QS_ALLINPUT);
+    }
 }
 
 /// Internal listener state returned to KeyboardListener
@@ -86,8 +109,8 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<Windows
             }
         };
 
-        // Message loop - required for low-level hooks to function
-        // We use PeekMessage with a sleep to allow checking the running flag
+        // Message loop - required for low-level hooks to function.
+        // Keep the short timeout so shutdown polling behavior remains unchanged.
         let mut msg = MSG::default();
         loop {
             // Check if we should stop
@@ -96,18 +119,13 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<Windows
             }
 
             // Process all pending messages
-            unsafe {
-                while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
-                    if msg.message == WM_QUIT {
-                        break;
-                    }
-                    TranslateMessage(&msg);
-                    DispatchMessageW(&msg);
-                }
+            if drain_thread_messages(&mut msg) {
+                break;
             }
 
-            // Sleep briefly to avoid busy-waiting while still being responsive
-            thread::sleep(std::time::Duration::from_millis(10));
+            // Wait for messages or timeout — unlike thread::sleep, this returns
+            // immediately when a message arrives, so hook callbacks are never delayed.
+            wait_for_message_or_timeout(HOOK_LOOP_TIMEOUT_MS);
         }
 
         // Clean up the hooks
@@ -282,4 +300,56 @@ fn should_block_hotkey(
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+    use windows::Win32::UI::WindowsAndMessaging::PostQuitMessage;
+
+    fn clear_message_queue() {
+        let mut msg = MSG::default();
+        unsafe { while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {} }
+    }
+
+    #[test]
+    fn wait_times_out_when_no_messages() {
+        clear_message_queue();
+        let start = Instant::now();
+        wait_for_message_or_timeout(20);
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed >= Duration::from_millis(8),
+            "expected wait to block close to timeout, elapsed={elapsed:?}"
+        );
+        clear_message_queue();
+    }
+
+    #[test]
+    fn wait_returns_immediately_when_message_is_pending() {
+        clear_message_queue();
+        unsafe {
+            PostQuitMessage(0);
+        }
+        let start = Instant::now();
+        wait_for_message_or_timeout(200);
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed < Duration::from_millis(100),
+            "expected pending message to wake wait early, elapsed={elapsed:?}"
+        );
+        clear_message_queue();
+    }
+
+    #[test]
+    fn drain_messages_stops_on_wm_quit() {
+        clear_message_queue();
+        unsafe {
+            PostQuitMessage(0);
+        }
+        let mut msg = MSG::default();
+        assert!(drain_thread_messages(&mut msg));
+        clear_message_queue();
+    }
 }
