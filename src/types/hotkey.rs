@@ -366,6 +366,38 @@ mod tests {
     }
 
     #[test]
+    fn hotkey_display_roundtrip_keypad() {
+        // Ensure all keypad keys roundtrip through Hotkey Display → FromStr
+        let keypad_keys = [
+            Key::KeypadPlus,
+            Key::KeypadMinus,
+            Key::KeypadMultiply,
+            Key::KeypadDivide,
+            Key::KeypadDecimal,
+            Key::KeypadEquals,
+            Key::KeypadEnter,
+            Key::KeypadClear,
+        ];
+        for key in keypad_keys {
+            // Key-only hotkey
+            let hotkey = Hotkey::new(Modifiers::empty(), key).unwrap();
+            let displayed = format!("{}", hotkey);
+            let parsed: Hotkey = displayed.parse().unwrap_or_else(|e| {
+                panic!("Failed to parse '{}' (from {:?}): {}", displayed, key, e)
+            });
+            assert_eq!(parsed, hotkey, "Key-only roundtrip failed for {:?}", key);
+
+            // With modifier
+            let hotkey = Hotkey::new(Modifiers::CMD, key).unwrap();
+            let displayed = format!("{}", hotkey);
+            let parsed: Hotkey = displayed.parse().unwrap_or_else(|e| {
+                panic!("Failed to parse '{}' (from Cmd+{:?}): {}", displayed, key, e)
+            });
+            assert_eq!(parsed, hotkey, "Cmd+{:?} roundtrip failed", key);
+        }
+    }
+
+    #[test]
     fn hotkey_new_validates() {
         // Valid combinations
         assert!(Hotkey::new(Modifiers::CMD, Key::K).is_ok());
