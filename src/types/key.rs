@@ -103,6 +103,11 @@ pub enum Key {
     Slash,
     Grave,
     Section,
+    // JIS keyboard keys
+    JisYen,
+    JisUnderscore,
+    JisEisu,
+    JisKana,
 
     // Keypad
     Keypad0,
@@ -123,6 +128,7 @@ pub enum Key {
     KeypadEnter,
     KeypadMinus,
     KeypadEquals,
+    KeypadComma,
 
     // Lock keys
     CapsLock,
@@ -224,6 +230,10 @@ impl fmt::Display for Key {
             Key::Slash => write!(f, "/"),
             Key::Grave => write!(f, "`"),
             Key::Section => write!(f, "§"),
+            Key::JisYen => write!(f, "¥"),
+            Key::JisUnderscore => write!(f, "JisUnderscore"),
+            Key::JisEisu => write!(f, "Eisu"),
+            Key::JisKana => write!(f, "Kana"),
             Key::Keypad0 => write!(f, "Keypad0"),
             Key::Keypad1 => write!(f, "Keypad1"),
             Key::Keypad2 => write!(f, "Keypad2"),
@@ -242,6 +252,7 @@ impl fmt::Display for Key {
             Key::KeypadEnter => write!(f, "KeypadEnter"),
             Key::KeypadMinus => write!(f, "Keypad-"),
             Key::KeypadEquals => write!(f, "Keypad="),
+            Key::KeypadComma => write!(f, "Keypad,"),
             Key::CapsLock => write!(f, "CapsLock"),
             Key::ScrollLock => write!(f, "ScrollLock"),
             Key::NumLock => write!(f, "NumLock"),
@@ -354,6 +365,10 @@ impl FromStr for Key {
             "/" | "slash" => Ok(Key::Slash),
             "`" | "grave" | "backtick" => Ok(Key::Grave),
             "§" | "section" => Ok(Key::Section),
+            "¥" | "jisyen" | "yen" => Ok(Key::JisYen),
+            "jisunderscore" => Ok(Key::JisUnderscore),
+            "eisu" | "jiseisu" | "英数" => Ok(Key::JisEisu),
+            "kana" | "jiskana" | "かな" => Ok(Key::JisKana),
 
             // Keypad
             "keypad0" => Ok(Key::Keypad0),
@@ -374,6 +389,7 @@ impl FromStr for Key {
             "keypadenter" => Ok(Key::KeypadEnter),
             "keypad-" | "keypadminus" => Ok(Key::KeypadMinus),
             "keypad=" | "keypadequals" => Ok(Key::KeypadEquals),
+            "keypad," | "keypadcomma" => Ok(Key::KeypadComma),
 
             // Lock keys
             "capslock" | "caps" => Ok(Key::CapsLock),
@@ -471,6 +487,11 @@ mod tests {
             Key::Escape,
             Key::LeftArrow,
             Key::RightArrow,
+            Key::JisYen,
+            Key::JisUnderscore,
+            Key::JisEisu,
+            Key::JisKana,
+            Key::KeypadComma,
         ];
         for key in keys {
             let displayed = format!("{}", key);

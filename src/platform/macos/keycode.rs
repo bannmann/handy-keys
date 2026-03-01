@@ -80,6 +80,9 @@ mod keycodes {
     pub const F18: u16 = 0x4F;
     pub const F19: u16 = 0x50;
     pub const F20: u16 = 0x5A;
+    pub const JIS_YEN: u16 = 0x5D;
+    pub const JIS_UNDERSCORE: u16 = 0x5E;
+    pub const JIS_KEYPAD_COMMA: u16 = 0x5F;
     pub const RIGHT_COMMAND: u16 = 0x36;
     pub const KEYPAD_EQUALS: u16 = 0x51;
     pub const KEYPAD_0: u16 = 0x52;
@@ -92,6 +95,8 @@ mod keycodes {
     pub const KEYPAD_7: u16 = 0x59;
     pub const KEYPAD_8: u16 = 0x5B;
     pub const KEYPAD_9: u16 = 0x5C;
+    pub const JIS_EISU: u16 = 0x66;
+    pub const JIS_KANA: u16 = 0x68;
     pub const F5: u16 = 0x60;
     pub const F6: u16 = 0x61;
     pub const F7: u16 = 0x62;
@@ -222,6 +227,11 @@ pub fn keycode_to_key(keycode: CGKeyCode) -> Option<Key> {
         keycodes::KEYPAD_ENTER => Some(Key::KeypadEnter),
         keycodes::KEYPAD_MINUS => Some(Key::KeypadMinus),
         keycodes::KEYPAD_EQUALS => Some(Key::KeypadEquals),
+        keycodes::JIS_YEN => Some(Key::JisYen),
+        keycodes::JIS_UNDERSCORE => Some(Key::JisUnderscore),
+        keycodes::JIS_KEYPAD_COMMA => Some(Key::KeypadComma),
+        keycodes::JIS_EISU => Some(Key::JisEisu),
+        keycodes::JIS_KANA => Some(Key::JisKana),
         keycodes::CAPS_LOCK => Some(Key::CapsLock),
         _ => None,
     }

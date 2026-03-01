@@ -97,6 +97,8 @@ mod vk {
     pub const OEM_5: u16 = 0xDC; // \|
     pub const OEM_6: u16 = 0xDD; // ]}
     pub const OEM_7: u16 = 0xDE; // '"
+    pub const OEM_8: u16 = 0xDF;
+    pub const OEM_102: u16 = 0xE2; // ISO extra key (between Left Shift and Z)
 }
 
 /// Convert Windows virtual key code to Key
@@ -214,6 +216,8 @@ pub fn vk_to_key(vk_code: u16, is_extended: bool) -> Option<Key> {
         vk::OEM_5 => Some(Key::Backslash),
         vk::OEM_6 => Some(Key::RightBracket),
         vk::OEM_7 => Some(Key::Quote),
+        vk::OEM_8 => Some(Key::Grave),    // backtick on UK layout
+        vk::OEM_102 => Some(Key::Section), // ISO extra key
 
         // Lock keys
         vk::CAPITAL => Some(Key::CapsLock),
