@@ -110,6 +110,7 @@ mod keycodes {
     pub const F10: u16 = 0x6D;
     pub const F12: u16 = 0x6F;
     pub const F15: u16 = 0x71;
+    pub const HELP: u16 = 0x72; // Insert key on external keyboards
     pub const HOME: u16 = 0x73;
     pub const PAGE_UP: u16 = 0x74;
     pub const FORWARD_DELETE: u16 = 0x75;
@@ -189,6 +190,7 @@ pub fn keycode_to_key(keycode: CGKeyCode) -> Option<Key> {
         keycodes::ESCAPE => Some(Key::Escape),
         keycodes::DELETE => Some(Key::Delete),
         keycodes::FORWARD_DELETE => Some(Key::ForwardDelete),
+        keycodes::HELP => Some(Key::Insert),
         keycodes::HOME => Some(Key::Home),
         keycodes::END => Some(Key::End),
         keycodes::PAGE_UP => Some(Key::PageUp),
