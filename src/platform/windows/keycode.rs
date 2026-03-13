@@ -192,6 +192,7 @@ pub fn vk_to_key(vk_code: u16, is_extended: bool) -> Option<Key> {
         // Special keys
         vk::BACK => Some(Key::Delete), // Backspace
         vk::DELETE => Some(Key::ForwardDelete),
+        vk::INSERT => Some(Key::Insert),
         vk::TAB => Some(Key::Tab),
         vk::ESCAPE => Some(Key::Escape),
         vk::SPACE => Some(Key::Space),
