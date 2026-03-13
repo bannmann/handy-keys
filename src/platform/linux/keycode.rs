@@ -68,6 +68,7 @@ pub fn rdev_key_to_key(key: rdev::Key) -> Option<Key> {
         RK::Escape => Some(Key::Escape),
         RK::Backspace => Some(Key::Delete),
         RK::Delete => Some(Key::ForwardDelete),
+        RK::Insert => Some(Key::Insert),
         RK::Home => Some(Key::Home),
         RK::End => Some(Key::End),
         RK::PageUp => Some(Key::PageUp),

@@ -36,78 +36,38 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<LinuxLi
     let thread_running = Arc::clone(&running);
 
     let handle = thread::spawn(move || {
-        let callback = move |event: rdev::Event| -> Option<rdev::Event> {
-            // Check if we should stop processing events
-            if !thread_running.load(Ordering::SeqCst) {
-                return Some(event);
-            }
+        loop {
+            let cb_state = Arc::clone(&thread_state);
+            let cb_running = Arc::clone(&thread_running);
 
-            let mut should_block = false;
+            let callback = move |event: rdev::Event| -> Option<rdev::Event> {
+                if !cb_running.load(Ordering::SeqCst) {
+                    return Some(event);
+                }
 
-            if let Ok(mut state) = thread_state.lock() {
-                match event.event_type {
-                    rdev::EventType::KeyPress(rdev_key) => {
-                        if let Some(changed_modifier) = rdev_key_to_modifier(rdev_key) {
-                            let prev_mods = state.current_modifiers;
-                            state.current_modifiers =
-                                update_modifiers(state.current_modifiers, rdev_key, true);
+                let mut should_block = false;
 
-                            // Emit modifier change event
-                            if state.current_modifiers != prev_mods {
-                                // Check if this modifier-only combo should be blocked
-                                should_block = state.should_block(state.current_modifiers, None);
+                if let Ok(mut state) = cb_state.lock() {
+                    match event.event_type {
+                        rdev::EventType::KeyPress(rdev_key) => {
+                            if let Some(changed_modifier) = rdev_key_to_modifier(rdev_key) {
+                                let prev_mods = state.current_modifiers;
+                                state.current_modifiers =
+                                    update_modifiers(state.current_modifiers, rdev_key, true);
 
-                                let _ = state.event_sender.send(KeyEvent {
-                                    modifiers: state.current_modifiers,
-                                    key: None,
-                                    is_key_down: true,
-                                    changed_modifier: Some(changed_modifier),
-                                });
-                            }
-                        } else if let Some(key) = rdev_key_to_key(rdev_key) {
-                            // Check if this should be blocked
-                            should_block = state.should_block(state.current_modifiers, Some(key));
+                                if state.current_modifiers != prev_mods {
+                                    should_block = state.should_block(state.current_modifiers, None);
 
-                            let _ = state.event_sender.send(KeyEvent {
-                                modifiers: state.current_modifiers,
-                                key: Some(key),
-                                is_key_down: true,
-                                changed_modifier: None,
-                            });
-                        }
-                    }
-                    rdev::EventType::KeyRelease(rdev_key) => {
-                        if let Some(changed_modifier) = rdev_key_to_modifier(rdev_key) {
-                            let prev_mods = state.current_modifiers;
-                            state.current_modifiers =
-                                update_modifiers(state.current_modifiers, rdev_key, false);
+                                    let _ = state.event_sender.send(KeyEvent {
+                                        modifiers: state.current_modifiers,
+                                        key: None,
+                                        is_key_down: true,
+                                        changed_modifier: Some(changed_modifier),
+                                    });
+                                }
+                            } else if let Some(key) = rdev_key_to_key(rdev_key) {
+                                should_block = state.should_block(state.current_modifiers, Some(key));
 
-                            // Emit modifier change event
-                            if state.current_modifiers != prev_mods {
-                                let _ = state.event_sender.send(KeyEvent {
-                                    modifiers: state.current_modifiers,
-                                    key: None,
-                                    is_key_down: false,
-                                    changed_modifier: Some(changed_modifier),
-                                });
-                            }
-                        } else if let Some(key) = rdev_key_to_key(rdev_key) {
-                            // Block key up if we blocked key down (to be consistent)
-                            should_block = state.should_block(state.current_modifiers, Some(key));
-
-                            let _ = state.event_sender.send(KeyEvent {
-                                modifiers: state.current_modifiers,
-                                key: Some(key),
-                                is_key_down: false,
-                                changed_modifier: None,
-                            });
-                        }
-                    }
-                    rdev::EventType::ButtonPress(button) => {
-                        if let Some(key) = rdev_button_to_key(button) {
-                            // Only report left/right clicks when modifiers are held
-                            let is_common = matches!(key, Key::MouseLeft | Key::MouseRight);
-                            if !is_common || !state.current_modifiers.is_empty() {
                                 let _ = state.event_sender.send(KeyEvent {
                                     modifiers: state.current_modifiers,
                                     key: Some(key),
@@ -116,11 +76,23 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<LinuxLi
                                 });
                             }
                         }
-                    }
-                    rdev::EventType::ButtonRelease(button) => {
-                        if let Some(key) = rdev_button_to_key(button) {
-                            let is_common = matches!(key, Key::MouseLeft | Key::MouseRight);
-                            if !is_common || !state.current_modifiers.is_empty() {
+                        rdev::EventType::KeyRelease(rdev_key) => {
+                            if let Some(changed_modifier) = rdev_key_to_modifier(rdev_key) {
+                                let prev_mods = state.current_modifiers;
+                                state.current_modifiers =
+                                    update_modifiers(state.current_modifiers, rdev_key, false);
+
+                                if state.current_modifiers != prev_mods {
+                                    let _ = state.event_sender.send(KeyEvent {
+                                        modifiers: state.current_modifiers,
+                                        key: None,
+                                        is_key_down: false,
+                                        changed_modifier: Some(changed_modifier),
+                                    });
+                                }
+                            } else if let Some(key) = rdev_key_to_key(rdev_key) {
+                                should_block = state.should_block(state.current_modifiers, Some(key));
+
                                 let _ = state.event_sender.send(KeyEvent {
                                     modifiers: state.current_modifiers,
                                     key: Some(key),
@@ -129,21 +101,53 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<LinuxLi
                                 });
                             }
                         }
+                        rdev::EventType::ButtonPress(button) => {
+                            if let Some(key) = rdev_button_to_key(button) {
+                                let is_common = matches!(key, Key::MouseLeft | Key::MouseRight);
+                                if !is_common || !state.current_modifiers.is_empty() {
+                                    let _ = state.event_sender.send(KeyEvent {
+                                        modifiers: state.current_modifiers,
+                                        key: Some(key),
+                                        is_key_down: true,
+                                        changed_modifier: None,
+                                    });
+                                }
+                            }
+                        }
+                        rdev::EventType::ButtonRelease(button) => {
+                            if let Some(key) = rdev_button_to_key(button) {
+                                let is_common = matches!(key, Key::MouseLeft | Key::MouseRight);
+                                if !is_common || !state.current_modifiers.is_empty() {
+                                    let _ = state.event_sender.send(KeyEvent {
+                                        modifiers: state.current_modifiers,
+                                        key: Some(key),
+                                        is_key_down: false,
+                                        changed_modifier: None,
+                                    });
+                                }
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
+                }
+
+                if should_block {
+                    None
+                } else {
+                    Some(event)
+                }
+            };
+
+            match rdev::grab(callback) {
+                Ok(()) => break,
+                Err(e) => {
+                    eprintln!("rdev grab error: {:?}, retrying in 2s", e);
+                    if !thread_running.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(2));
                 }
             }
-
-            if should_block {
-                None // Block the event
-            } else {
-                Some(event) // Pass through
-            }
-        };
-
-        // Start grabbing - this blocks indefinitely
-        if let Err(e) = rdev::grab(callback) {
-            eprintln!("rdev grab error: {:?}", e);
         }
     });
 
