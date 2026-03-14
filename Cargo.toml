@@ -1,6 +1,6 @@
 [package]
 name = "handy-keys"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 description = "Cross-platform global keyboard shortcuts library"
 license = "MIT"
