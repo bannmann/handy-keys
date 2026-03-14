@@ -29,6 +29,7 @@ mod vk {
     pub const UP: u16 = 0x26;
     pub const RIGHT: u16 = 0x27;
     pub const DOWN: u16 = 0x28;
+    pub const INSERT: u16 = 0x2D;
     pub const DELETE: u16 = 0x2E;
 
     // Numbers 0-9 are 0x30-0x39
