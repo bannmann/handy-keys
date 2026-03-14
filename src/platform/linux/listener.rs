@@ -56,7 +56,11 @@ pub(crate) fn spawn(blocking_hotkeys: Option<BlockingHotkeys>) -> Result<LinuxLi
                                     update_modifiers(state.current_modifiers, rdev_key, true);
 
                                 if state.current_modifiers != prev_mods {
-                                    should_block = state.should_block(state.current_modifiers, None);
+                                    // Never block standalone modifier events. If the process
+                                    // crashes or hangs while a modifier is blocked, the release
+                                    // event never reaches the compositor — leaving the key
+                                    // permanently "held" and the system unusable without reboot.
+                                    // Only the non-modifier key in a combo should be blocked.
 
                                     let _ = state.event_sender.send(KeyEvent {
                                         modifiers: state.current_modifiers,
