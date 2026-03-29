@@ -42,4 +42,7 @@ windows = { version = "0.58", features = [
 ] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-rdev = { version = "0.5.3", features = ["unstable_grab"] }
+inputlib = { version = "0.6.0", features = ["unstable_grab"] }
+
+[patch.crates-io]
+inputlib = { path = "../rdev" }

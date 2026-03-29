@@ -1,4 +1,4 @@
-//! Linux platform support using rdev
+//! Linux platform support using inputlib
 
 pub(crate) mod keycode;
 pub(crate) mod listener;

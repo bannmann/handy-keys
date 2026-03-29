@@ -1,10 +1,10 @@
-//! Linux key conversion utilities (using rdev)
+//! Linux key conversion utilities (using inputlib)
 
 use crate::types::{Key, Modifiers};
 
-/// Convert rdev::Key to our Key type
-pub fn rdev_key_to_key(key: rdev::Key) -> Option<Key> {
-    use rdev::Key as RK;
+/// Convert inputlib::Key to our Key type
+pub fn inputlib_key_to_key(key: inputlib::Key) -> Option<Key> {
+    use inputlib::Key as RK;
     match key {
         // Letters
         RK::KeyA => Some(Key::A),
@@ -47,7 +47,7 @@ pub fn rdev_key_to_key(key: rdev::Key) -> Option<Key> {
         RK::Num9 => Some(Key::Num9),
 
         // Function keys
-        // Note: rdev on Linux only supports F1-F12
+        // Note: inputlib on Linux only supports F1-F12
         RK::F1 => Some(Key::F1),
         RK::F2 => Some(Key::F2),
         RK::F3 => Some(Key::F3),
@@ -120,9 +120,9 @@ pub fn rdev_key_to_key(key: rdev::Key) -> Option<Key> {
     }
 }
 
-/// Convert an rdev modifier key to our side-specific Modifiers type
-pub fn rdev_key_to_modifier(key: rdev::Key) -> Option<Modifiers> {
-    use rdev::Key as RK;
+/// Convert an inputlib modifier key to our side-specific Modifiers type
+pub fn inputlib_key_to_modifier(key: inputlib::Key) -> Option<Modifiers> {
+    use inputlib::Key as RK;
     match key {
         RK::ShiftLeft => Some(Modifiers::SHIFT_LEFT),
         RK::ShiftRight => Some(Modifiers::SHIFT_RIGHT),
@@ -136,9 +136,9 @@ pub fn rdev_key_to_modifier(key: rdev::Key) -> Option<Modifiers> {
     }
 }
 
-/// Convert rdev::Button to our Key type
-pub fn rdev_button_to_key(button: rdev::Button) -> Option<Key> {
-    use rdev::Button as RB;
+/// Convert inputlib::Button to our Key type
+pub fn inputlib_button_to_key(button: inputlib::Button) -> Option<Key> {
+    use inputlib::Button as RB;
     match button {
         RB::Left => Some(Key::MouseLeft),
         RB::Right => Some(Key::MouseRight),
@@ -150,8 +150,8 @@ pub fn rdev_button_to_key(button: rdev::Button) -> Option<Key> {
 }
 
 /// Update modifier state based on key event
-pub fn update_modifiers(current: Modifiers, key: rdev::Key, pressed: bool) -> Modifiers {
-    use rdev::Key as RK;
+pub fn update_modifiers(current: Modifiers, key: inputlib::Key, pressed: bool) -> Modifiers {
+    use inputlib::Key as RK;
     let modifier = match key {
         RK::ShiftLeft => Modifiers::SHIFT_LEFT,
         RK::ShiftRight => Modifiers::SHIFT_RIGHT,

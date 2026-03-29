@@ -7,7 +7,7 @@
 //!
 //! - **macOS**: Uses CGEventTap. Requires accessibility permissions.
 //! - **Windows**: Uses low-level keyboard hooks. Clean thread shutdown.
-//! - **Linux**: Uses rdev. On Wayland, blocking may not work due to
+//! - **Linux**: Uses inputlib. On Wayland, blocking may not work due to
 //!   compositor restrictions. Thread cleanup is limited.
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -134,8 +134,8 @@ impl Drop for KeyboardListener {
         self.running.store(false, Ordering::SeqCst);
 
         // On macOS and Windows, we can join the thread for clean shutdown.
-        // On Linux (rdev), the thread continues running but becomes idle
-        // because rdev::grab() blocks indefinitely.
+        // On Linux (inputlib), the thread continues running but becomes idle
+        // because inputlib::grab() blocks indefinitely.
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         if let Some(handle) = self._thread_handle.take() {
             let _ = handle.join();

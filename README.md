@@ -64,7 +64,7 @@ Uses low-level keyboard hooks. No special permissions required.
 
 ### Linux
 
-Uses [rdev](https://crates.io/crates/rdev). On Wayland, hotkey blocking may not work due to compositor restrictions.
+Uses [inputlib](https://crates.io/crates/inputlib). On Wayland, hotkey blocking may not work due to compositor restrictions.
 
 ## Modifiers
 

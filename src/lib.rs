@@ -90,7 +90,7 @@
 //!
 //! ## Linux
 //!
-//! Uses [rdev](https://crates.io/crates/rdev). On Wayland, hotkey blocking may not
+//! Uses [inputlib](https://crates.io/crates/inputlib). On Wayland, hotkey blocking may not
 //! work due to compositor restrictions.
 
 mod error;
